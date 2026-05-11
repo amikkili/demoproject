@@ -34,19 +34,18 @@
 		<configuration>
 
           <!-- CloudHub 1.0 deployment descriptor -->
-          <cloudHubDeployment>
-            <uri>https://anypoint.mulesoft.com</uri>
-
-            <!-- Credentials injected from buildspec.yml at runtime -->
-            <username>muleclass1</username>
-            <password>Muleclass1</password>
-            <orgId>ast-3</orgId>
-            <applicationName>demoproject</applicationName>
-            <!-- Runtime version — match your Anypoint target -->
-            <muleVersion>4.6.0</muleVersion>
-            <!-- Skip deployment during unit test runs -->
-            <skipDeploymentVerification>false</skipDeploymentVerification>
-          </cloudHubDeployment>
+		<cloudHubDeployment>
+			<uri>https://anypoint.mulesoft.com</uri>
+			<username>${anypoint.username}</username>
+			<password>${anypoint.password}</password>
+			<businessGroupId>${anypoint.businessGroupId}</businessGroupId>
+			<environment>${anypoint.environment}</environment>
+			<applicationName>${cloudhub.applicationName}</applicationName>
+			<region>${cloudhub.region}</region>
+			<workers>${cloudhub.workers}</workers>
+			<workerType>${cloudhub.workerType}</workerType>
+			<muleVersion>${mule.version}</muleVersion>
+		</cloudHubDeployment>
 
         </configuration>
         </plugin>
