@@ -15,57 +15,26 @@ phases:
     runtime-versions:
       java: corretto17
     commands:
-      - echo "=== Install phase ==="
       - java -version
       - mvn -version
-      - echo "Installing Anypoint CLI..."
       - npm install -g anypoint-cli-v4
       - anypoint-cli-v4 --version
 
   pre_build:
     commands:
-      - echo "=== Pre-build phase ==="
       - mkdir -p ~/.m2
-      - printf '<?xml version="1.0" encoding="UTF-8"?>\n<settings>\n  <servers>\n    <server>\n      <id>anypoint-exchange-v3</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n    <server>\n      <id>mulesoft-releases</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n  </servers>\n</settings>\n' "$ANYPOINT_USERNAME" "$ANYPOINT_PASSWORD" "$ANYPOINT_USERNAME" "$ANYPOINT_PASSWORD" > ~/.m2/settings.xml
-      - echo "settings.xml written"
+      - python3 -c "import os; f=open(os.path.expanduser('~/.m2/settings.xml'),'w'); f.write('<settings><servers><server><id>anypoint-exchange-v3</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server><server><id>mulesoft-releases</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server></servers></settings>'); f.close()"
+      - echo "settings.xml created"
 
   build:
     commands:
-      - echo "=== Step 1: Build JAR with Maven ==="
       - mvn clean package --no-transfer-progress
-      - echo "JAR built successfully"
-      - ls -lh target/*.jar
-
-      - echo "=== Step 2: Deploy to CloudHub 2.0 via Anypoint CLI ==="
-      - JAR_FILE=$(ls target/*-mule-application.jar | head -1)
-      - echo "Deploying $JAR_FILE to CloudHub 2.0..."
-      - |
-        anypoint-cli-v4 runtime-mgr cloudhub2-application deploy \
-          --username "$ANYPOINT_USERNAME" \
-          --password "$ANYPOINT_PASSWORD" \
-          --organization "$ANYPOINT_ORG" \
-          --environment "$ANYPOINT_ENV" \
-          --runtime-version "4.6.0:e2" \
-          --target "Shared Space" \
-          --replicas 1 \
-          --vcores 0.1 \
-          "$APP_NAME" \
-          "$JAR_FILE"
+      - ls -lh target/
+      - anypoint-cli-v4 runtime-mgr cloudhub2-application deploy --username "$ANYPOINT_USERNAME" --password "$ANYPOINT_PASSWORD" --organization "$ANYPOINT_ORG" --environment "$ANYPOINT_ENV" --runtime-version "4.6.0:e2" --target "Shared Space" --replicas 1 --vcores 0.1 "$APP_NAME" "$(ls target/*-mule-application.jar | head -1)"
 
   post_build:
     commands:
-      - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ]; then
-          echo "========================================"
-          echo "Deployment SUCCEEDED"
-          echo "App : $APP_NAME"
-          echo "Env : $ANYPOINT_ENV"
-          echo "Check: anypoint.mulesoft.com → Runtime Manager"
-          echo "========================================"
-        else
-          echo "Deployment FAILED - check output above"
-          exit 1
-        fi
+      - echo "Build complete - status $CODEBUILD_BUILD_SUCCEEDING"
 
 cache:
   paths:
