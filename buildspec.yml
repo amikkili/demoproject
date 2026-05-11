@@ -17,8 +17,6 @@ phases:
     commands:
       - java -version
       - mvn -version
-      - npm install -g anypoint-cli-v4
-      - anypoint-cli-v4 --version
 
   pre_build:
     commands:
@@ -28,13 +26,15 @@ phases:
 
   build:
     commands:
+      - echo "Step 1 - Build JAR"
       - mvn clean package --no-transfer-progress
       - ls -lh target/
-      - anypoint-cli-v4 runtime-mgr cloudhub2-application deploy --username "$ANYPOINT_USERNAME" --password "$ANYPOINT_PASSWORD" --organization "$ANYPOINT_ORG" --environment "$ANYPOINT_ENV" --runtime-version "4.6.0:e2" --target "Shared Space" --replicas 1 --vcores 0.1 "$APP_NAME" "$(ls target/*-mule-application.jar | head -1)"
+      - echo "Step 2 - Deploy to CloudHub 2.0 via REST API"
+      - python3 deploy.py
 
   post_build:
     commands:
-      - echo "Build complete - status $CODEBUILD_BUILD_SUCCEEDING"
+      - echo "Done - status $CODEBUILD_BUILD_SUCCEEDING"
 
 cache:
   paths:
