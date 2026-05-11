@@ -16,15 +16,9 @@
     <app.runtime>4.6.21</app.runtime>
     <mule.maven.plugin.version>4.2.0</mule.maven.plugin.version>
 
-    <!-- Deployment properties — overridden by buildspec.yml at runtime -->
+    <!-- Secrets injected at runtime from buildspec.yml via SSM -->
     <anypoint.username/>
     <anypoint.password/>
-    <anypoint.businessGroupId/>
-    <anypoint.environment>Sandbox</anypoint.environment>
-    <cloudhub.applicationName>${project.artifactId}</cloudhub.applicationName>
-    <cloudhub.target>Shared Space</cloudhub.target>
-    <cloudhub.replicas>1</cloudhub.replicas>
-    <cloudhub.vCores>0.1</cloudhub.vCores>
   </properties>
 
   <build>
@@ -42,18 +36,31 @@
         <extensions>true</extensions>
         <configuration>
 
-          <!-- CloudHub 2.0 deployment — matches your Anypoint Shared Space -->
+          <!-- ✅ CloudHub 2.0 — Shared Space (Free Trial) -->
           <cloudHub2Deployment>
             <uri>https://anypoint.mulesoft.com</uri>
+
+            <!-- Credentials from SSM via buildspec -D flags -->
             <username>${anypoint.username}</username>
             <password>${anypoint.password}</password>
-            <businessGroupId>${anypoint.businessGroupId}</businessGroupId>
-            <environment>${anypoint.environment}</environment>
-            <applicationName>${cloudhub.applicationName}</applicationName>
-            <target>${cloudhub.target}</target>
+
+            <!-- ⚠️ FILL IN: Your Anypoint Org ID from Access Management → Organization -->
+            <businessGroupId>a83d760c-d47d-492f-a442-1b8bef1f102f</businessGroupId>
+
+            <environment>Sandbox</environment>
+
+            <!-- ⚠️ FILL IN: Your desired app name on CloudHub -->
+            <applicationName>demoproject</applicationName>
+
+            <!-- Free trial uses Shared Space -->
+            <target>Shared Space</target>
+
+            <!-- Runtime version matching your Anypoint account -->
             <muleVersion>${app.runtime}</muleVersion>
-            <replicas>${cloudhub.replicas}</replicas>
-            <vCores>${cloudhub.vCores}</vCores>
+
+            <!-- Minimum resources for free trial -->
+            <replicas>1</replicas>
+            <vCores>0.1</vCores>
           </cloudHub2Deployment>
 
         </configuration>
