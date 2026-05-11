@@ -1,122 +1,45 @@
 version: 0.2
 
-# ──────────────────────────────────────────────────────────────────
-# buildspec.yml  →  place this at the ROOT of your GitHub repo
-# Flow: SSM credentials → Maven build → Deploy to Anypoint CloudHub
-# ──────────────────────────────────────────────────────────────────
-
 env:
   variables:
     MAVEN_OPTS: "-Xmx1024m"
-    ANYPOINT_ENVIRONMENT: "Sandbox"   # Free Trial always uses Sandbox
-
-  # ✅ FIXED: these must be SSM parameter PATHS, not the actual values.
-  # AWS fetches the real values from Parameter Store automatically at runtime.
+    ANYPOINT_ENVIRONMENT: "Sandbox"
   parameter-store:
     ANYPOINT_USERNAME: "/Muleclass1/anypoint-username"
     ANYPOINT_PASSWORD: "/Muleclass1/anypoint-password"
 
 phases:
-
-  # ── Install: Java 17 + Maven ──────────────────────────────────────
   install:
     runtime-versions:
       java: corretto17
     commands:
-      - echo "=== Install phase ==="
+      - echo "Install phase"
       - java -version
       - mvn -version
 
-  # ── Pre-build: validate vars + write Maven settings ───────────────
   pre_build:
     commands:
-      - echo "=== Pre-build phase ==="
-
-      # Validate all required CodeBuild environment variables are set
-      - |
-        for VAR in APP_NAME ANYPOINT_ORG_ID CLOUDHUB_REGION ANYPOINT_ENVIRONMENT; do
-          if [ -z "${!VAR}" ]; then
-            echo "ERROR: Required variable '$VAR' is not set in CodeBuild environment."
-            exit 1
-          fi
-        done
-
-      # Validate SSM credentials were successfully retrieved
-      - |
-        if [ -z "$ANYPOINT_USERNAME" ] || [ -z "$ANYPOINT_PASSWORD" ]; then
-          echo "ERROR: Anypoint credentials could not be retrieved from SSM."
-          echo "Check that /Muleclass1/anypoint-username and /Muleclass1/anypoint-password exist."
-          exit 1
-        fi
-      - echo "All variables validated successfully."
-
-      # Print deployment summary (no secrets printed)
-      - echo "App Name    : $APP_NAME"
-      - echo "Environment : $ANYPOINT_ENVIRONMENT"
-      - echo "Org ID      : $ANYPOINT_ORG_ID"
-      - echo "Region      : $CLOUDHUB_REGION"
-      - echo "Username    : $ANYPOINT_USERNAME"
-
-      # Write Maven settings.xml for Anypoint Exchange access
+      - echo "Pre-build phase"
       - mkdir -p ~/.m2
-      - |
-        cat > ~/.m2/settings.xml <<EOF
-        <?xml version="1.0" encoding="UTF-8"?>
-        <settings>
-          <servers>
-            <server>
-              <id>anypoint-exchange-v3</id>
-              <username>${ANYPOINT_USERNAME}</username>
-              <password>${ANYPOINT_PASSWORD}</password>
-            </server>
-            <server>
-              <id>MuleRepository</id>
-              <username>${ANYPOINT_USERNAME}</username>
-              <password>${ANYPOINT_PASSWORD}</password>
-            </server>
-          </servers>
-        </settings>
-        EOF
-      - echo "Maven settings.xml written."
+      - printf '<?xml version="1.0" encoding="UTF-8"?>\n<settings>\n  <servers>\n    <server>\n      <id>anypoint-exchange-v3</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n    <server>\n      <id>MuleRepository</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n  </servers>\n</settings>\n' "$ANYPOINT_USERNAME" "$ANYPOINT_PASSWORD" "$ANYPOINT_USERNAME" "$ANYPOINT_PASSWORD" > ~/.m2/settings.xml
+      - echo "settings.xml written"
+      - echo "App=$APP_NAME Env=$ANYPOINT_ENVIRONMENT Org=$ANYPOINT_ORG_ID Region=$CLOUDHUB_REGION"
 
-  # ── Build: compile + deploy to CloudHub in one Maven command ──────
   build:
     commands:
-      - echo "=== Build phase: Maven clean deploy to CloudHub ==="
-      - |
-        mvn clean deploy -DmuleDeploy \
-          -Danypoint.username="$ANYPOINT_USERNAME" \
-          -Danypoint.password="$ANYPOINT_PASSWORD" \
-          -Danypoint.environment="$ANYPOINT_ENVIRONMENT" \
-          -Danypoint.businessGroup="$ANYPOINT_ORG_ID" \
-          -Dcloudhub.applicationName="$APP_NAME" \
-          -Dcloudhub.region="$CLOUDHUB_REGION" \
-          -Dcloudhub.workers=1 \
-          -Dcloudhub.workerType="Micro" \
-          --no-transfer-progress
+      - echo "Build and Deploy to CloudHub"
+      - mvn clean deploy -DmuleDeploy -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD" -Danypoint.environment="$ANYPOINT_ENVIRONMENT" -Danypoint.businessGroup="$ANYPOINT_ORG_ID" -Dcloudhub.applicationName="$APP_NAME" -Dcloudhub.region="$CLOUDHUB_REGION" -Dcloudhub.workers=1 -Dcloudhub.workerType="Micro" --no-transfer-progress
 
-  # ── Post-build: report result ─────────────────────────────────────
   post_build:
     commands:
       - |
         if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ]; then
-          echo "================================================"
-          echo "  Deployment to CloudHub SUCCEEDED"
-          echo "  App : $APP_NAME"
-          echo "  Env : $ANYPOINT_ENVIRONMENT"
-          echo "  Check: https://anypoint.mulesoft.com"
-          echo "================================================"
+          echo "Deployment SUCCEEDED - check anypoint.mulesoft.com"
         else
-          echo "=== Deployment FAILED ==="
-          echo "Common causes:"
-          echo "  1. Invalid Anypoint credentials in SSM"
-          echo "  2. Wrong ANYPOINT_ORG_ID in CodeBuild env vars"
-          echo "  3. App name conflict in CloudHub"
-          echo "  4. pom.xml missing mule-maven-plugin"
+          echo "Deployment FAILED"
           exit 1
         fi
 
-# ── Cache Maven deps to speed up future builds ────────────────────
 cache:
   paths:
     - "/root/.m2/**/*"
