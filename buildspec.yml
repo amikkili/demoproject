@@ -1,5 +1,4 @@
 version: 0.2
-
 env:
   variables:
     MAVEN_OPTS: "-Xmx1024m"
@@ -7,7 +6,6 @@ env:
   parameter-store:
     ANYPOINT_USERNAME: "/Muleclass1/anypoint-username"
     ANYPOINT_PASSWORD: "/Muleclass1/anypoint-password"
-
 phases:
   install:
     runtime-versions:
@@ -16,7 +14,6 @@ phases:
       - echo "Install phase"
       - java -version
       - mvn -version
-
   pre_build:
     commands:
       - echo "Pre-build phase"
@@ -31,8 +28,7 @@ phases:
 
   post_build:
     commands:
-      - echo "Build status - $CODEBUILD_BUILD_SUCCEEDING"
-
+      - echo "Done - status $CODEBUILD_BUILD_SUCCEEDING"
 cache:
   paths:
     - "/root/.m2/**/*"
