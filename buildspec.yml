@@ -1,5 +1,4 @@
 version: 0.2
-
 env:
   variables:
     MAVEN_OPTS: "-Xmx1024m"
@@ -7,7 +6,6 @@ env:
   parameter-store:
     ANYPOINT_USERNAME: "/Muleclass1/anypoint-username"
     ANYPOINT_PASSWORD: "/Muleclass1/anypoint-password"
-
 phases:
   install:
     runtime-versions:
@@ -16,30 +14,21 @@ phases:
       - echo "Install phase"
       - java -version
       - mvn -version
-
   pre_build:
     commands:
       - echo "Pre-build phase"
       - mkdir -p ~/.m2
       - printf '<?xml version="1.0" encoding="UTF-8"?>\n<settings>\n  <servers>\n    <server>\n      <id>anypoint-exchange-v3</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n    <server>\n      <id>MuleRepository</id>\n      <username>%s</username>\n      <password>%s</password>\n    </server>\n  </servers>\n</settings>\n' "$ANYPOINT_USERNAME" "$ANYPOINT_PASSWORD" "$ANYPOINT_USERNAME" "$ANYPOINT_PASSWORD" > ~/.m2/settings.xml
       - echo "settings.xml written"
-      - echo "App=$APP_NAME Env=$ANYPOINT_ENVIRONMENT Org=$ANYPOINT_ORG_ID Region=$CLOUDHUB_REGION"
 
   build:
     commands:
-      - echo "Build and Deploy to CloudHub"
+      - echo "Deploying to CloudHub"
       - mvn clean deploy -DmuleDeploy -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD" -Danypoint.environment="$ANYPOINT_ENVIRONMENT" -Danypoint.businessGroup="$ANYPOINT_ORG_ID" -Dcloudhub.applicationName="$APP_NAME" -Dcloudhub.region="$CLOUDHUB_REGION" -Dcloudhub.workers=1 -Dcloudhub.workerType="Micro" --no-transfer-progress
 
   post_build:
     commands:
-      - |
-        if [ "$CODEBUILD_BUILD_SUCCEEDING" = "1" ]; then
-          echo "Deployment SUCCEEDED - check anypoint.mulesoft.com"
-        else
-          echo "Deployment FAILED"
-          exit 1
-        fi
-
+      - echo "Done - status $CODEBUILD_BUILD_SUCCEEDING"
 cache:
   paths:
     - "/root/.m2/**/*"
