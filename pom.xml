@@ -35,6 +35,7 @@
 
           <!-- ✅ CORRECT: cloudhub2Deployment (lowercase h) not cloudHub2Deployment -->
           <cloudhub2Deployment>
+            <provider>MC</provider>
             <uri>https://anypoint.mulesoft.com</uri>
             <username>${anypoint.username}</username>
             <password>${anypoint.password}</password>
