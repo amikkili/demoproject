@@ -52,7 +52,7 @@
             <password>${anypoint.password}</password>
             <businessGroupId>a83d760c-d47d-492f-a442-1b8bef1f102f</businessGroupId>
             <environment>Sandbox</environment>
-            <applicationName>demoproject</applicationName>
+            <applicationName>demoproject-cicd</applicationName>
             <target>Cloudhub-US-East-2</target>
             <muleVersion>${app.runtime}</muleVersion>
             <replicas>1</replicas>
