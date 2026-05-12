@@ -5,11 +5,16 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <!-- groupId MUST be Anypoint Org ID for Exchange publishing -->
+  <!-- groupId must be Anypoint Org ID for Exchange publishing -->
   <groupId>a83d760c-d47d-492f-a442-1b8bef1f102f</groupId>
   <artifactId>demoproject</artifactId>
-  <!-- No SNAPSHOT — Exchange requires released versions -->
-  <version>${revision}</version>
+
+  <!--
+    VERSION: Update this manually before each deployment.
+    Exchange rejects duplicate versions, so bump this (1.0.1, 1.0.2 etc.)
+    every time you push a new version.
+  -->
+  <version>1.0.0</version>
   <packaging>mule-application</packaging>
   <name>demoproject</name>
 
@@ -22,7 +27,7 @@
     <anypoint.password/>
   </properties>
 
-  <!-- Publish JAR to Anypoint Exchange -->
+  <!-- Publishes JAR to Anypoint Exchange -->
   <distributionManagement>
     <repository>
       <id>anypoint-exchange-v3</id>
