@@ -19,12 +19,14 @@ phases:
     commands:
       - mkdir -p ~/.m2
       - python3 -c "import os; f=open(os.path.expanduser('~/.m2/settings.xml'),'w'); f.write('<settings><servers><server><id>anypoint-exchange-v3</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server><server><id>mulesoft-releases</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server></servers></settings>'); f.close()"
-      - echo "settings.xml ready"
+      - echo "Settings ready"
 
   build:
     commands:
-      - echo "Building and deploying to CloudHub 2.0 Cloudhub-US-East-2"
-      - mvn clean deploy -DmuleDeploy -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD" --no-transfer-progress
+      - echo "Step 1 - Build and publish JAR to Anypoint Exchange"
+      - mvn clean deploy --no-transfer-progress -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD"
+      - echo "Step 2 - Deploy from Exchange to CloudHub 2.0"
+      - mvn mule:deploy -DmuleDeploy --no-transfer-progress -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD"
 
   post_build:
     commands:
