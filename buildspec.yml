@@ -3,9 +3,6 @@ version: 0.2
 env:
   variables:
     MAVEN_OPTS: "-Xmx1024m"
-    APP_NAME: "demoproject"
-    ANYPOINT_ENV: "Sandbox"
-    ANYPOINT_ORG: "a83d760c-d47d-492f-a442-1b8bef1f102f"
   parameter-store:
     ANYPOINT_USERNAME: "/Muleclass1/anypoint-username"
     ANYPOINT_PASSWORD: "/Muleclass1/anypoint-password"
@@ -22,15 +19,12 @@ phases:
     commands:
       - mkdir -p ~/.m2
       - python3 -c "import os; f=open(os.path.expanduser('~/.m2/settings.xml'),'w'); f.write('<settings><servers><server><id>anypoint-exchange-v3</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server><server><id>mulesoft-releases</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server></servers></settings>'); f.close()"
-      - echo "settings.xml created"
+      - echo "settings.xml ready"
 
   build:
     commands:
-      - echo "Step 1 - Build JAR"
-      - mvn clean package --no-transfer-progress
-      - ls -lh target/
-      - echo "Step 2 - Deploy to CloudHub 2.0 via REST API"
-      - python3 deploy.py
+      - echo "Building and deploying to CloudHub 2.0 Cloudhub-US-East-2"
+      - mvn clean deploy -DmuleDeploy -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD" --no-transfer-progress
 
   post_build:
     commands:

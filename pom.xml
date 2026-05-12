@@ -13,8 +13,10 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <app.runtime>4.6.21</app.runtime>
+    <app.runtime>4.6.0</app.runtime>
     <mule.maven.plugin.version>4.2.0</mule.maven.plugin.version>
+    <anypoint.username/>
+    <anypoint.password/>
   </properties>
 
   <build>
@@ -24,13 +26,26 @@
         <artifactId>maven-clean-plugin</artifactId>
         <version>3.2.0</version>
       </plugin>
-      <!-- mule-maven-plugin: ONLY used for building the JAR, NOT deploying -->
-      <!-- Deployment is handled by Anypoint CLI in buildspec.yml -->
       <plugin>
         <groupId>org.mule.tools.maven</groupId>
         <artifactId>mule-maven-plugin</artifactId>
         <version>${mule.maven.plugin.version}</version>
         <extensions>true</extensions>
+        <configuration>
+          <cloudHub2Deployment>
+            <uri>https://anypoint.mulesoft.com</uri>
+            <username>${anypoint.username}</username>
+            <password>${anypoint.password}</password>
+            <businessGroupId>a83d760c-d47d-492f-a442-1b8bef1f102f</businessGroupId>
+            <environment>Sandbox</environment>
+            <applicationName>demoproject</applicationName>
+            <!-- Exact target name discovered from API -->
+            <target>Cloudhub-US-East-2</target>
+            <muleVersion>${app.runtime}</muleVersion>
+            <replicas>1</replicas>
+            <vCores>0.1</vCores>
+          </cloudHub2Deployment>
+        </configuration>
       </plugin>
     </plugins>
   </build>
