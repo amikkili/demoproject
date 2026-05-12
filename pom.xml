@@ -9,7 +9,7 @@
   <groupId>a83d760c-d47d-492f-a442-1b8bef1f102f</groupId>
   <artifactId>demoproject</artifactId>
   <!-- No SNAPSHOT — Exchange requires released versions -->
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <packaging>mule-application</packaging>
   <name>demoproject</name>
 
