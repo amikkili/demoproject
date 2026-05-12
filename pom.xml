@@ -14,7 +14,7 @@
     Exchange rejects duplicate versions, so bump this (1.0.1, 1.0.2 etc.)
     every time you push a new version.
   -->
-  <version>1.0.9</version>
+  <version>1.0.10</version>
   <packaging>mule-application</packaging>
   <name>demoproject</name>
 
@@ -57,7 +57,7 @@
             <password>${anypoint.password}</password>
             <businessGroupId>a83d760c-d47d-492f-a442-1b8bef1f102f</businessGroupId>
             <environment>Sandbox</environment>
-            <applicationName>demoproject-cicd</applicationName>
+            <applicationName>demoproject-aws</applicationName>
             <target>Cloudhub-US-East-2</target>
             <muleVersion>${app.runtime}</muleVersion>
             <replicas>1</replicas>
