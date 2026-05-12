@@ -19,16 +19,15 @@ phases:
     commands:
       - mkdir -p ~/.m2
       - python3 -c "import os; f=open(os.path.expanduser('~/.m2/settings.xml'),'w'); f.write('<settings><servers><server><id>anypoint-exchange-v3</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server><server><id>mulesoft-releases</id><username>'+os.environ['ANYPOINT_USERNAME']+'</username><password>'+os.environ['ANYPOINT_PASSWORD']+'</password></server></servers></settings>'); f.close()"
-      - export BUILD_VERSION="1.0.$(date +%s)"
-      - echo "Build version - $BUILD_VERSION"
+      - echo "Settings ready"
+      - echo "1.0.$(date +%s)" > /tmp/build_version.txt
+      - echo "Build version $(cat /tmp/build_version.txt)"
 
   build:
     commands:
-      - export BUILD_VERSION="1.0.$(date +%s)"
-      - echo "Step 1 - Publish version $BUILD_VERSION to Anypoint Exchange"
-      - mvn clean deploy -Drevision=$BUILD_VERSION --no-transfer-progress -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD"
-      - echo "Step 2 - Deploy from Exchange to CloudHub 2.0"
-      - mvn mule:deploy -DmuleDeploy -Drevision=$BUILD_VERSION --no-transfer-progress -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD"
+      - BUILD_VERSION=$(cat /tmp/build_version.txt)
+      - echo "Running single Maven command - build + publish Exchange + deploy CloudHub 2.0"
+      - mvn clean deploy -DmuleDeploy -Drevision=$BUILD_VERSION --no-transfer-progress -Danypoint.username="$ANYPOINT_USERNAME" -Danypoint.password="$ANYPOINT_PASSWORD"
 
   post_build:
     commands:
