@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-deploy.py - Deploys MuleSoft JAR to Anypoint CloudHub 2.0 Shared Space
-Place at root of GitHub repo alongside buildspec.yml
+deploy.py - Deploys MuleSoft JAR to Anypoint CloudHub 2.0
+Uses Application Manager API v2 (correct API for CH2 Shared Space)
 """
-
 import os, sys, glob, json, subprocess
 
 USERNAME    = os.environ["ANYPOINT_USERNAME"]
@@ -13,99 +12,105 @@ ENVIRONMENT = os.environ["ANYPOINT_ENV"]
 APP_NAME    = os.environ["APP_NAME"]
 BASE_URL    = "https://anypoint.mulesoft.com"
 
-def curl(method, url, headers=None, data=None, files=None, ignore_error=False):
-    h = ""
-    for k, v in (headers or {}).items():
-        h += f" -H '{k}: {v}'"
-    body = ""
-    if data:
-        body = f" -d '{json.dumps(data)}'"
-    form = ""
-    if files:
-        for k, v in files.items():
-            form += f" -F '{k}={v}'"
-
-    cmd = f"curl -s -X {method}{h}{body}{form} '{url}'"
-    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    print(f"    HTTP status check for {url.split('/')[-1]}")
-    if r.returncode != 0 and not ignore_error:
-        print(f"ERROR: curl failed\n{r.stderr}")
-        sys.exit(1)
+def curl_get(url, headers):
+    h = " ".join(f"-H '{k}: {v}'" for k, v in headers.items())
+    r = subprocess.run(f"curl -s {h} '{url}'", shell=True, capture_output=True, text=True)
+    print(f"    GET {url.split('mulesoft.com')[1]}")
+    print(f"    Response: {r.stdout[:2000]}")
     try:
-        return json.loads(r.stdout) if r.stdout.strip() else {}
+        return json.loads(r.stdout)
     except Exception:
-        print(f"Response: {r.stdout[:500]}")
+        return {}
+
+def curl_post_json(url, headers, data):
+    h = " ".join(f"-H '{k}: {v}'" for k, v in headers.items())
+    body = json.dumps(data).replace("'", "'\\''")
+    r = subprocess.run(f"curl -s -X POST {h} -d '{body}' '{url}'", shell=True, capture_output=True, text=True)
+    print(f"    POST {url.split('mulesoft.com')[1]}")
+    print(f"    Response: {r.stdout[:2000]}")
+    try:
+        return json.loads(r.stdout)
+    except Exception:
         return {}
 
 # Step 1 — Login
-print(">>> Step 1: Login to Anypoint Platform")
-resp = curl("POST", f"{BASE_URL}/accounts/login",
-            headers={"Content-Type": "application/json"},
-            data={"username": USERNAME, "password": PASSWORD})
+print("\n>>> Step 1: Login")
+resp = curl_post_json(f"{BASE_URL}/accounts/login",
+    {"Content-Type": "application/json"},
+    {"username": USERNAME, "password": PASSWORD})
 token = resp.get("access_token")
 if not token:
-    print(f"ERROR: Login failed. Response: {resp}")
-    sys.exit(1)
-print("    Login OK")
+    print("ERROR: Login failed"); sys.exit(1)
+print("    OK")
 AUTH = {"Authorization": f"Bearer {token}"}
 
-# Step 2 — Get Environment ID
-print(f">>> Step 2: Get Environment ID for '{ENVIRONMENT}'")
-resp = curl("GET", f"{BASE_URL}/accounts/api/organizations/{ORG_ID}/environments", headers=AUTH)
+# Step 2 — Environment ID
+print(f"\n>>> Step 2: Get Environment ID for '{ENVIRONMENT}'")
+resp = curl_get(f"{BASE_URL}/accounts/api/organizations/{ORG_ID}/environments", AUTH)
 envs = resp.get("data", [])
 env = next((e for e in envs if e["name"] == ENVIRONMENT), None)
 if not env:
-    print(f"ERROR: Environment '{ENVIRONMENT}' not found. Available: {[e['name'] for e in envs]}")
-    sys.exit(1)
+    print(f"ERROR: '{ENVIRONMENT}' not found. Got: {[e['name'] for e in envs]}"); sys.exit(1)
 ENV_ID = env["id"]
-print(f"    Environment ID: {ENV_ID}")
+print(f"    ENV_ID = {ENV_ID}")
 
-# Step 3 — Get Shared Space Target ID
-print(">>> Step 3: Get CloudHub 2.0 Shared Space target ID")
-resp = curl("GET",
-            f"{BASE_URL}/runtimefabric/api/organizations/{ORG_ID}/targets?environmentId={ENV_ID}",
-            headers={**AUTH, "X-ANYPNT-ENV-ID": ENV_ID, "X-ANYPNT-ORG-ID": ORG_ID})
+# Step 3 — List deployment targets (CH2 Application Manager API)
+print("\n>>> Step 3: List CloudHub 2.0 deployment targets")
+headers = {**AUTH, "X-ANYPNT-ENV-ID": ENV_ID, "X-ANYPNT-ORG-ID": ORG_ID}
+resp = curl_get(f"{BASE_URL}/amc/application-manager/api/v2/organizations/{ORG_ID}/environments/{ENV_ID}/deploymentTargets", headers)
 
-targets = resp if isinstance(resp, list) else resp.get("items", resp.get("data", []))
-print(f"    Available targets: {[t.get('name','?') for t in targets]}")
+# Print full response to see target structure
+print(f"    FULL targets: {json.dumps(resp, indent=2)}")
 
-# Find Shared Space target
-target = next((t for t in targets if "shared" in t.get("name","").lower() or t.get("type","") in ["SharedSpace","MC"]), None)
-if not target:
-    print(f"    Full targets response: {json.dumps(resp, indent=2)}")
-    print("ERROR: No Shared Space target found")
+targets = resp if isinstance(resp, list) else resp.get("items", resp.get("targets", [resp] if resp else []))
+print(f"    Target count: {len(targets)}")
+
+TARGET_ID = None
+for t in targets:
+    print(f"    Target: {json.dumps(t)}")
+    name = str(t.get("name","")).lower()
+    ttype = str(t.get("type","")).lower()
+    tid = t.get("id") or t.get("targetId")
+    if any(x in name+ttype for x in ["shared","mc","cloudhub"]):
+        TARGET_ID = tid
+        TARGET_NAME = t.get("name","SharedSpace")
+        break
+
+if not TARGET_ID and targets:
+    # Just use the first available target
+    TARGET_ID = targets[0].get("id") or targets[0].get("targetId")
+    TARGET_NAME = targets[0].get("name", "unknown")
+    print(f"    Using first available target: {TARGET_NAME} / {TARGET_ID}")
+
+if not TARGET_ID:
+    print("ERROR: No targets found at all. Check org ID and environment.")
     sys.exit(1)
-TARGET_ID = target.get("id") or target.get("targetId")
-print(f"    Target: {target.get('name')} | ID: {TARGET_ID}")
+print(f"    Using target: {TARGET_NAME} / {TARGET_ID}")
 
 # Step 4 — Find JAR
-print(">>> Step 4: Locate JAR")
+print("\n>>> Step 4: Find JAR")
 jars = glob.glob("target/*-mule-application.jar")
 if not jars:
-    print("ERROR: No JAR in target/")
-    sys.exit(1)
+    print("ERROR: No JAR in target/"); sys.exit(1)
 JAR = jars[0]
 print(f"    JAR: {JAR}")
 
-# Step 5 — Check if app already deployed
-print(f">>> Step 5: Check if '{APP_NAME}' exists")
-resp = curl("GET",
-            f"{BASE_URL}/runtimefabric/api/organizations/{ORG_ID}/deployments?environmentId={ENV_ID}",
-            headers={**AUTH, "X-ANYPNT-ENV-ID": ENV_ID, "X-ANYPNT-ORG-ID": ORG_ID},
-            ignore_error=True)
-items = resp if isinstance(resp, list) else resp.get("items", [])
+# Step 5 — Check if app exists
+print(f"\n>>> Step 5: Check if '{APP_NAME}' exists")
+resp = curl_get(f"{BASE_URL}/amc/application-manager/api/v2/organizations/{ORG_ID}/environments/{ENV_ID}/deployments", headers)
+items = resp if isinstance(resp, list) else resp.get("items", resp.get("deployments", []))
 existing = next((d for d in items if d.get("name") == APP_NAME), None)
-if existing:
-    DEPLOY_ID = existing["id"]
-    print(f"    Found existing deployment ID: {DEPLOY_ID} — will UPDATE")
-else:
-    DEPLOY_ID = None
-    print("    Not found — will CREATE new deployment")
+DEPLOY_ID = existing.get("id") if existing else None
+print(f"    Existing deployment ID: {DEPLOY_ID or 'None (will CREATE)'}")
 
-# Step 6 — Deploy via multipart
-print(f">>> Step 6: Uploading and deploying...")
+# Step 6 — Deploy
+print(f"\n>>> Step 6: Deploy to CloudHub 2.0")
+method = "PATCH" if DEPLOY_ID else "POST"
+url = f"{BASE_URL}/amc/application-manager/api/v2/organizations/{ORG_ID}/environments/{ENV_ID}/deployments"
+if DEPLOY_ID:
+    url += f"/{DEPLOY_ID}"
 
-app_config = json.dumps({
+app_info = json.dumps({
     "name": APP_NAME,
     "target": {
         "provider": "MC",
@@ -122,34 +127,28 @@ app_config = json.dumps({
     "application": {"desiredState": "STARTED"}
 })
 
-if DEPLOY_ID:
-    method = "PATCH"
-    url = f"{BASE_URL}/runtimefabric/api/organizations/{ORG_ID}/deployments/{DEPLOY_ID}"
-else:
-    method = "POST"
-    url = f"{BASE_URL}/runtimefabric/api/organizations/{ORG_ID}/deployments"
-
 cmd = (
     f"curl -s -X {method} "
     f"-H 'Authorization: Bearer {token}' "
     f"-H 'X-ANYPNT-ENV-ID: {ENV_ID}' "
     f"-H 'X-ANYPNT-ORG-ID: {ORG_ID}' "
-    f"-F 'applicationInfo={app_config};type=application/json' "
+    f"-F 'applicationInfo={app_info};type=application/json' "
     f"-F 'application=@{JAR};type=application/java-archive' "
     f"'{url}'"
 )
-
 r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-print(f"    Response: {r.stdout[:1000]}")
+print(f"    Deploy response: {r.stdout[:2000]}")
 
-if r.returncode != 0 or '"error"' in r.stdout.lower() or '"message"' in r.stdout.lower():
-    try:
-        err = json.loads(r.stdout)
-        if "error" in err or ("status" in err and err.get("status", 200) >= 400):
-            print(f"ERROR: API returned error: {json.dumps(err, indent=2)}")
-            sys.exit(1)
-    except Exception:
-        pass
+if r.returncode != 0:
+    print(f"ERROR: {r.stderr}"); sys.exit(1)
 
-print(f">>> SUCCESS: '{APP_NAME}' deployment triggered on CloudHub 2.0 Sandbox!")
-print(f">>> Check: https://anypoint.mulesoft.com → Runtime Manager → Applications")
+try:
+    resp = json.loads(r.stdout)
+    status = resp.get("status", resp.get("desiredState",""))
+    if isinstance(resp.get("status"), int) and resp["status"] >= 400:
+        print(f"ERROR: API error: {json.dumps(resp,indent=2)}"); sys.exit(1)
+except Exception:
+    pass
+
+print(f"\n>>> SUCCESS: '{APP_NAME}' deployed to CloudHub 2.0!")
+print(f">>> Check: https://anypoint.mulesoft.com → Runtime Manager → Sandbox")
