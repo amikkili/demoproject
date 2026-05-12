@@ -14,7 +14,7 @@
     Exchange rejects duplicate versions, so bump this (1.0.1, 1.0.2 etc.)
     every time you push a new version.
   -->
-  <version>1.0.0</version>
+  <version>1.0.3</version>
   <packaging>mule-application</packaging>
   <name>demoproject</name>
 
