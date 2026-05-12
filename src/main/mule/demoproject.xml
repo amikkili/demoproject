@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd"></mule>
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="99ed729d-756c-4ac9-a7b7-2ce885c24e7f" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<flow name="demoprojectFlow" doc:id="0955c131-4a1f-44ec-8439-a7b4ca78bd06" >
+		<http:listener doc:name="Listener" doc:id="cfabf584-b583-49a1-815b-1021ad1e6925" config-ref="HTTP_Listener_config" path="/demopath"/>
+		<logger level="INFO" doc:name="Logger" doc:id="2a8d0820-ee79-40f4-ba39-d2dd1d77cc49" />
+		<ee:transform doc:name="Transform Message" doc:id="0c8facb0-4b5e-4fbc-96de-27a1cc9be809" />
+	</flow>
+</mule>

@@ -14,14 +14,14 @@
     Exchange rejects duplicate versions, so bump this (1.0.1, 1.0.2 etc.)
     every time you push a new version.
   -->
-  <version>1.0.6</version>
+  <version>1.0.8</version>
   <packaging>mule-application</packaging>
   <name>demoproject</name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <app.runtime>4.11.4</app.runtime>
+    <app.runtime>4.11.4:4e</app.runtime>
     <mule.maven.plugin.version>4.2.0</mule.maven.plugin.version>
     <anypoint.username/>
     <anypoint.password/>
